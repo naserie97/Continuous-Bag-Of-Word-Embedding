@@ -19,3 +19,5 @@ CGOW.py --text_file Path/to/text/file/contains/the/data --half_size int --emb_di
 </p>
 
 After executing the code a pkl file will be saved in your current working directory when you deserialize this file you will get a python dictionary that map each word to its embedding.  
+
+The dir. naser is a python vertual environment 
