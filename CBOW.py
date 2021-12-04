@@ -9,7 +9,7 @@ import argparse
 import pickle
 
 
-# inputs
+# inputs needed form the user
 ###########################################
 # txt file  
 # C: context half-size
@@ -119,6 +119,17 @@ def pack_idx_with_frequency(context_words, word2Ind):
 
 
 def get_vectors(data, word2Ind, V, C):
+
+    """ This generator takes:
+         data: the training corpus
+         word2Ind: dict. which maps each word to a unique index
+         V: vocabulary size
+         C: context half size 
+
+        and yield  a list that contain tuples each tupe is a word index
+        that was in the context word and the frequency of
+        this word in the given context."""
+
     i = C
     while True:
         # place holder in the size of vocab for the one hot encoding for each word in x
@@ -133,7 +144,7 @@ def get_vectors(data, word2Ind, V, C):
         context_words = data[(i - C):i] + data[(i+1):(i+C+1)]
         num_ctx_words = len(context_words)
         # pack_idx_with_frequency return a list that contain tuples
-        # each tupe is a word indext that was in the context word
+        # each tupe is a word index that was in the context word
         # and the frequency of this word in the given context
         for idx, freq in pack_idx_with_frequency(context_words, word2Ind):
             x[idx] = freq/num_ctx_words
@@ -145,6 +156,16 @@ def get_vectors(data, word2Ind, V, C):
 
             
 def get_batches(data, word2Ind, V, C, batch_size):
+
+    """This generator yields training data in batches with size of batch_size
+    and takes the following inputs:
+
+        data: is the prepared training data. 
+        word2Ind: dict that maps each word with a unique index.
+        V: vocabulary size
+        C: context half size.
+        batch_size: is the batch size.
+    """
     batch_x = []
     batch_y = []
     for x, y in get_vectors(data, word2Ind, V, C):
@@ -192,9 +213,13 @@ def softmax(z):
     return yhat
 
 
-# Foreward propagation to calculate H and Z2 
 
+# Foreward propagation to calculate H and Z2 
 def forward_prop(x, W1, W2, b1, b2):
+
+    """This function takes the initial values for the trainable parameters, 
+    perform the foreard propagation and return z_2 
+    and h which is the activation of the first layer"""
     
     z_1 = np.dot(W1, x) + b1
     
@@ -214,6 +239,19 @@ def compute_cost(y, yhat, batch_size):
 
 
 def back_prop(x, yhat, y, h, W1, W2, b1, b2, batch_size):
+
+    """This function perform the back propagation by calculating the gradiants
+    of the cost with respect to the trainable parameters.
+
+       x: is the prepered training data.
+       yhat: is the prediction of the model.
+       y: is the true value 
+       W1, W2, b1, b2: are the trainable parameters
+      batch_size: is the batch size
+
+    and return: 
+       grad_W1, grad_W2, grad_b1, grad_b2: the gradiants
+    of the cost with respect to the trainable parameters W1, W2, b1, b2"""
     
     # grad_w1 = 1/m * ReLU(W2.T . (yhat - y)) . X.T
     l1 = np.dot(W2.T,(yhat-y))
@@ -234,6 +272,20 @@ def back_prop(x, yhat, y, h, W1, W2, b1, b2, batch_size):
 
 
 def gradient_descent(data, word2Ind, N, V, num_iters, C, alpha=0.03):
+
+    """This functio perform the gradient descent algorithm where the 
+    trainable parameters are modified.
+
+        data: is the prepared training data. 
+        word2Ind: dict that maps each word with a unique index.
+        N: embedding dimension.
+        V: vocabulary size
+        num_iters: number of training iterations.
+        C: context half size.
+        alpha: learning rate
+
+    and return: 
+        W1, W2, b1, b2: trained parameters"""
     
     W1, W2, b1, b2 = initialize_model(N,V, random_seed=282)
     batch_size = 128
@@ -259,12 +311,12 @@ def gradient_descent(data, word2Ind, N, V, num_iters, C, alpha=0.03):
         b1 -= alpha*grad_b1
         b2 -= alpha*grad_b2
         
-        ### END CODE HERE ###
         
         iters += 1 
         if iters == num_iters: 
             break
         if iters % 100 == 0:
+            # scaling the learning rate after each iteration.
             alpha *= 0.66
             
     return W1, W2, b1, b2
@@ -294,11 +346,25 @@ if which_w not in choose_w:
 
 def train_extract_and_save_emb(data, word2Ind, N, V, C, num_iters, which_w):
     
-    """This function takes the weights trained by the shallow NN and return the word embeddings
-    is three ways:
-    W1_emb: each row is an embedding for the words in the same order of words in the vocabulary
-    W2_emb: each row is an embedding for the words in the same order of words in the vocabulary
-    W1_W2_emb: is a combination of W1 and W2
+    """This function perform the gradient descent by calling thr function defined above 
+    then extract the embeddings from the trained weights by 3 different ways:
+
+      W1_emb: each row is an embedding for the words in the same order of words in the vocabulary
+      W2_emb: each row is an embedding for the words in the same order of words in the vocabulary
+      W1_W2_emb: is a combination of W1 and W2
+
+        data: is the prepared training data. 
+        word2Ind: dict that maps each word with a unique index.
+        N: embedding dimension.
+        V: vocabulary size
+        num_iters: number of training iterations.
+        C: context half size.
+        alpha: learning rate
+        which_w: from where you want the the embeddings be extracted, takes 'w1' or 'w2' or 'w1w2'
+
+    and finally save the extracted embedding in a dict where the each key is a word and 
+    the value is the extracted embedding for that word, this dict is then saved in a pkl file 
+    ehich can then be read and deserialized into a python dict. 
     """
     W1, W2, b1, b2 = gradient_descent(data, word2Ind, N, V, C, num_iters)
     
@@ -325,6 +391,8 @@ def train_extract_and_save_emb(data, word2Ind, N, V, C, num_iters, which_w):
     pkl_file = open("word_emmebding.pkl", "wb")
     pickle.dump(word_and_emb, pkl_file)
     pkl_file.close()
+
+
 
 
 if __name__ == "__main__":
